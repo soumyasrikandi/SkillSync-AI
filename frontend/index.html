@@ -1,0 +1,2076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillSync.AI</title>
+    <link rel="icon" type="image/jpeg" href="./logo.jpg" />
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                            950: '#2e1065',
+                            sidebar: '#1a102b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- React & ReactDOM (CDN) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #110e1b;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        .glass-card {
+            background: rgba(46, 16, 101, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            border-color: rgba(139, 92, 246, 0.4);
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.25);
+            transform: translateY(-2px);
+        }
+        
+        button {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        button:not([disabled]):hover {
+            filter: brightness(1.1);
+        }
+        button:not([disabled]):active {
+            transform: scale(0.97);
+        }
+        
+        .input-field {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        /* Nav item transitions */
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+        .nav-item:hover {
+            background-color: rgba(139, 92, 246, 0.1);
+            color: #fff;
+        }
+        .nav-item.active {
+            background-color: rgba(139, 92, 246, 0.2);
+            border-right: 3px solid #a78bfa;
+            color: #fff;
+        }
+        
+        /* Mobile sidebar */
+        @media (max-width: 768px) {
+            .mobile-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .mobile-sidebar.open {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen relative overflow-x-hidden">
+    <!-- Background Accents (Only show in Auth context via React logic if desired, or let it span) -->
+    <div class="fixed top-[-10%] left-[-10%] w-96 h-96 bg-brand-600 rounded-full mix-blend-screen filter blur-[120px] opacity-20 pointer-events-none z-[-1]"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-800 rounded-full mix-blend-screen filter blur-[150px] opacity-30 pointer-events-none z-[-1]"></div>
+
+    <div id="root" class="z-10 w-full h-full"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- ICONS (Inline SVGs for performance without bundler) ---
+        const Icons = {
+            Dashboard: () => <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>,
+            Upload: () => <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>,
+            Chart: () => <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 13v-1m4 1v-3m4 3V8M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>,
+            Brain: () => <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>,
+            Star: () => <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>,
+            User: () => <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>,
+            Menu: () => <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>,
+            Logout: () => <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>,
+            ClipboardCheck: () => <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        };
+
+        // --- SKILL GAP ANALYSIS COMPONENT ---
+        const SkillGapAnalysis = ({ parsedData }) => {
+            const [targetRole, setTargetRole] = useState('Software Engineer');
+            const [analysisResult, setAnalysisResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const roles = ["Software Engineer", "Data Scientist", "Web Developer", "Mobile App Developer", "Cybersecurity Analyst"];
+
+            const analyze = async () => {
+                if (!parsedData) return;
+                
+                let userSkills = parsedData.skills || [];
+                if (userSkills.length === 0) {
+                    userSkills = ["python", "html", "css"];
+                }
+
+                setLoading(true);
+                setError(null);
+                try {
+                    const res = await fetch('/api/auth/analyze-skills', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            role: targetRole,
+                            user_skills: userSkills
+                        })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Failed to analyze skills');
+                    setAnalysisResult(data);
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // Re-run analysis if role changes
+            useEffect(() => {
+                analyze();
+            }, [targetRole, parsedData]);
+
+            if (!parsedData) {
+                return (
+                    <div class="animate-fade-in flex flex-col items-center justify-center min-h-[400px]">
+                        <div class="glass-card p-8 rounded-2xl max-w-md text-center">
+                            <div class="inline-flex justify-center items-center w-16 h-16 rounded-full bg-brand-900/50 text-brand-400 mb-4">
+                                <Icons.Upload />
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">No Resume Data</h3>
+                            <p class="text-gray-400 mb-6">You need to upload and parse a resume first before we can run a gap analysis!</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div class="animate-fade-in space-y-6 pb-12">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <h2 class="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 tracking-tight drop-shadow-md pb-1">Skill Gap Analysis</h2>
+                        
+                        <div class="flex items-center space-x-3 bg-brand-900/30 p-2 rounded-xl backdrop-blur-md border border-brand-800/50">
+                            <span class="text-sm font-medium text-brand-300 pl-2">Target Role:</span>
+                            <select 
+                                value={targetRole} 
+                                onChange={(e) => setTargetRole(e.target.value)}
+                                class="bg-black/40 border border-brand-700/50 text-white text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 outline-none"
+                            >
+                                {roles.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    {error && (
+                        <div class="p-4 rounded-xl text-sm transition-all bg-red-900/40 text-red-300 border border-red-500/30">
+                            {error}
+                        </div>
+                    )}
+
+                    {loading || !analysisResult ? (
+                        <div class="h-64 flex items-center justify-center">
+                            <svg class="animate-spin h-8 w-8 text-brand-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </div>
+                    ) : (
+                        <div>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                
+                                {/* Match Overview Card */}
+                                {analysisResult.match !== undefined && (
+                                    <div class="glass-card rounded-2xl p-6 text-center shadow-[0_0_30px_rgba(109,40,217,0.15)] relative overflow-hidden flex flex-col justify-center">
+                                        <div class="absolute inset-0 bg-brand-600/5 z-0" style={{ height: `${analysisResult.match}%`, bottom: 0, top: 'auto', transition: 'all 1s ease' }}></div>
+                                        
+                                        <div class="relative z-10">
+                                            <h3 class="text-gray-300 font-medium mb-1">Match Confidence</h3>
+                                            <div class="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-300 to-white my-4">
+                                                {analysisResult.match}%
+                                            </div>
+                                            
+                                            <div class="w-full bg-black/40 rounded-full h-3 mb-4 overflow-hidden border border-brand-800/50">
+                                                <div class={`h-3 rounded-full ${analysisResult.match >= 70 ? 'bg-green-500' : analysisResult.match >= 40 ? 'bg-yellow-500' : 'bg-red-500'} transition-all duration-1000 ease-out`} style={{width: `${analysisResult.match}%`}}></div>
+                                            </div>
+                                            
+                                            <p class="text-sm text-gray-400">
+                                                {analysisResult.match >= 80 ? "Excellent Match! You are highly competitive." : 
+                                                analysisResult.match > 50 ? "Good Match! Focus on the missing skills." : 
+                                                "Low Match. Significant upskilling recommended."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Skill Breakdown Card */}
+                                {analysisResult.required && analysisResult.required.length > 0 && (
+                                    <div class="glass-card rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <h3 class="font-semibold text-white flex items-center">
+                                                <span class="w-3 h-3 rounded-full bg-brand-500 mr-2 shadow-[0_0_10px_rgba(139,92,246,0.5)]"></span>
+                                                Skill Breakdown 
+                                                <span class="ml-2 text-xs font-normal text-gray-400">({analysisResult.required.length} total)</span>
+                                            </h3>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2.5 max-h-56 overflow-y-auto pr-2 pb-2" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(139, 92, 246, 0.3) transparent' }}>
+                                            {analysisResult.required.map(skill => {
+                                                const isMissing = analysisResult.missing && analysisResult.missing.includes(skill);
+                                                return (
+                                                    <span key={skill} class={`text-[11px] uppercase tracking-wider px-3.5 py-2 rounded-full font-bold shadow-sm break-words whitespace-normal text-center border transition-all hover:-translate-y-0.5 ${isMissing ? 'bg-red-900/30 border-red-500/40 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.15)]' : 'bg-green-900/30 border-green-500/40 text-green-300 shadow-[0_0_10px_rgba(34,197,94,0.15)]'}`}>
+                                                        {skill}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                            </div>
+                            
+                            {/* Skill Comparison Chart */}
+                            <SkillComparisonChart analysisResult={analysisResult} />
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- SKILL COMPARISON RADAR CHART (Chart.js) ---
+        const SkillComparisonChart = ({ analysisResult }) => {
+            const chartRef = React.useRef(null);
+            const chartInstance = React.useRef(null);
+
+            React.useEffect(() => {
+                if (!chartRef.current) return;
+                
+                const ctx = chartRef.current.getContext('2d');
+                if (chartInstance.current) {
+                    chartInstance.current.destroy();
+                }
+                
+                // Use actual required or fallback to default roles for stable visualization
+                const reqSkills = analysisResult?.required || ['python', 'java', 'html', 'css', 'javascript'];
+                let usrSkills = analysisResult?.user_skills || [];
+                
+                // Fallback skills if completely missing to avoid empty charts
+                if (usrSkills.length === 0) {
+                    usrSkills = ["python", "html", "css"];
+                }
+                
+                // Labels only from ROLE_SKILLS (reqSkills list)
+                // Capitalize for cleaner UI display
+                const labels = reqSkills.map(s => s.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '));
+
+                // Always 100 for required skills to maintain the outer polygon bounds
+                const reqData = labels.map(() => 100);
+                
+                // Provide 100 if mapped, otherwise 30 for clear visualization
+                const usrData = labels.map(label => {
+                    const l = label.toLowerCase();
+                    return usrSkills.some(u => u.toLowerCase().includes(l) || l.includes(u.toLowerCase())) ? 100 : 30;
+                });
+
+                chartInstance.current = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Your Skills',
+                                data: usrData,
+                                backgroundColor: 'rgba(139, 92, 246, 0.3)', // Soft purple fill
+                                borderColor: 'rgba(139, 92, 246, 1)',
+                                pointBackgroundColor: 'rgba(139, 92, 246, 1)',
+                                pointBorderColor: '#fff',
+                                borderWidth: 2,
+                                fill: true,
+                            },
+                            {
+                                label: 'Required',
+                                data: reqData,
+                                backgroundColor: 'transparent', // No fill like in the image
+                                borderColor: 'rgba(239, 68, 68, 0.8)',
+                                borderDash: [5, 5],
+                                pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+                                pointBorderColor: '#fff',
+                                borderWidth: 2,
+                                fill: true,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: { display: false },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                                pointLabels: { color: '#9ca3af', font: { size: 11, family: 'Inter' } }
+                            }
+                        },
+                        plugins: {
+                            legend: { 
+                                display: true,
+                                labels: { color: '#9ca3af', usePointStyle: true, boxWidth: 8 },
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+
+                return () => {
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+                };
+            }, [analysisResult]);
+
+            return (
+                <div class="mt-8 mb-4">
+                    <h3 class="text-lg font-bold text-gray-300 mb-6">Skill Comparison Radar</h3>
+                    <div class="w-full h-96 flex justify-center items-center">
+                        <canvas ref={chartRef}></canvas>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- RADAR CHART COMPONENT (Chart.js) ---
+        const RadarChart = ({ data }) => {
+            const chartRef = React.useRef(null);
+            const chartInstance = React.useRef(null);
+
+            React.useEffect(() => {
+                if (!chartRef.current || !data) return;
+                
+                const ctx = chartRef.current.getContext('2d');
+                if (chartInstance.current) {
+                    chartInstance.current.destroy();
+                }
+                
+                const labels = Object.keys(data);
+                const values = Object.values(data);
+
+                chartInstance.current = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Score %',
+                            data: values,
+                            backgroundColor: 'rgba(139, 92, 246, 0.4)',
+                            borderColor: 'rgba(139, 92, 246, 1)',
+                            pointBackgroundColor: 'rgba(139, 92, 246, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(139, 92, 246, 1)',
+                            borderWidth: 2,
+                            fill: true,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: { display: false, maxTicksLimit: 5 },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                                pointLabels: { color: '#e5e7eb', font: { size: 10, family: 'Inter' } }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+
+                return () => {
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+                };
+            }, [data]);
+
+            return (
+                <div class="w-full h-64 flex justify-center items-center">
+                    <canvas ref={chartRef}></canvas>
+                </div>
+            );
+        };
+
+        // --- INTERVIEW PREDICTOR COMPONENT ---
+        const InterviewPredictor = ({ parsedData }) => {
+            const [targetRole, setTargetRole] = useState('Software Engineer');
+            const [assessmentScore, setAssessmentScore] = useState(null);
+            const [showAssessment, setShowAssessment] = useState(false);
+            const [predictionResult, setPredictionResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const roles = ["Software Engineer", "Data Scientist", "Web Developer", "Mobile App Developer", "Cybersecurity Analyst"];
+
+            const predict = async () => {
+                if (!parsedData || !parsedData.skills) return;
+                setLoading(true);
+                setError(null);
+                try {
+                    const res = await fetch('/api/auth/predict-interview', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            role: targetRole,
+                            parsed_data: parsedData,
+                            assessment_score: assessmentScore
+                        })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Failed to predict outcome');
+                    setPredictionResult(data);
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                predict();
+            }, [targetRole, parsedData, assessmentScore]);
+
+            if (!parsedData || (!parsedData.skills && !parsedData.raw_text)) {
+                return (
+                    <div class="animate-fade-in flex flex-col items-center justify-center min-h-[400px]">
+                        <div class="glass-card p-8 rounded-2xl max-w-md text-center">
+                            <div class="inline-flex justify-center items-center w-16 h-16 rounded-full bg-brand-900/50 text-brand-400 mb-4">
+                                <Icons.Upload />
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">No Resume Data</h3>
+                            <p class="text-gray-400 mb-6">You need to upload and parse a resume first before predicting interview success!</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div class="animate-fade-in space-y-6 pb-12">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <h2 class="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 tracking-tight drop-shadow-md pb-1">Interview Success Predictor</h2>
+                        
+                        <div class="flex items-center space-x-3 bg-brand-900/30 p-2 rounded-xl backdrop-blur-md border border-brand-800/50">
+                            <span class="text-sm font-medium text-brand-300 pl-2">Target Role:</span>
+                            <select 
+                                value={targetRole} 
+                                onChange={(e) => setTargetRole(e.target.value)}
+                                class="bg-black/40 border border-brand-700/50 text-white text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 outline-none"
+                            >
+                                {roles.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    {error && (
+                        <div class="p-4 rounded-xl text-sm transition-all bg-red-900/40 text-red-300 border border-red-500/30">
+                            {error}
+                        </div>
+                    )}
+
+                    {loading || !predictionResult ? (
+                        <div class="h-64 flex items-center justify-center">
+                            <svg class="animate-spin h-8 w-8 text-brand-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </div>
+                    ) : (
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
+                            
+                            {/* Main Score Card */}
+                            <div class="lg:col-span-1 flex flex-col space-y-4">
+                                <h3 class="text-xl font-bold text-white border-b border-white/10 pb-2">Overall Assessment</h3>
+                                <div class="glass-card rounded-2xl p-8 text-center shadow-[0_0_30px_rgba(109,40,217,0.15)] relative overflow-hidden flex-1 flex flex-col justify-center">
+                                    <div class="relative z-10">
+                                        <div class="text-gray-300 font-medium mb-2 uppercase tracking-widest text-xs">Success Probability</div>
+                                        <div class="text-7xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-brand-300 to-white my-6 drop-shadow-lg">
+                                            {predictionResult.success_percentage}%
+                                        </div>
+                                        
+                                        <div class="w-full bg-black/40 rounded-full h-4 mb-6 overflow-hidden border border-brand-800/50 shadow-inner">
+                                            <div class={`h-4 rounded-full ${predictionResult.success_percentage >= 75 ? 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.6)]' : predictionResult.success_percentage >= 50 ? 'bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]' : 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.6)]'} transition-all duration-1000 ease-out`} style={{width: `${predictionResult.success_percentage}%`}}></div>
+                                        </div>
+                                        
+                                        <div class="mt-4 p-4 rounded-xl bg-black/30 border border-brand-500/20 inline-flex flex-col items-center w-full">
+                                            <span class="text-xs text-gray-400 mb-2 uppercase tracking-wider font-semibold">Detected Risk Level</span>
+                                            <span class={`px-5 py-2 text-sm font-black rounded-lg uppercase tracking-widest w-full border ${
+                                                predictionResult.risk_label === 'Low' ? 'bg-green-900/30 text-green-400 border-green-500/30' :
+                                                predictionResult.risk_label === 'Medium' ? 'bg-orange-900/30 text-orange-400 border-orange-500/30' :
+                                                'bg-red-900/30 text-red-400 border-red-500/30'
+                                            }`}>
+                                                {predictionResult.risk_label}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Factor Breakdown */}
+                            <div class="lg:col-span-2 flex flex-col space-y-4">
+                                <h3 class="text-xl font-bold text-white border-b border-white/10 pb-2">Factor Breakdown</h3>
+                                <div class="glass-card rounded-2xl p-8 h-full flex flex-col justify-center">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                                        <RadarChart data={predictionResult.factors} />
+                                        <div class="space-y-5">
+                                            {Object.entries(predictionResult.factors).map(([factor, score]) => (
+                                                <div key={factor}>
+                                                    <div class="flex justify-between items-end mb-2">
+                                                        <span class="text-sm font-semibold text-gray-200">{factor}</span>
+                                                        <span class="text-base font-black text-brand-300">{score}%</span>
+                                                    </div>
+                                                    <div class="w-full bg-black/50 rounded-full h-2 overflow-hidden shadow-inner">
+                                                        <div class="bg-brand-500 h-2 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(139,92,246,0.5)]" style={{ width: `${score}%` }}></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    )}
+
+                    {!loading && predictionResult && !showAssessment && (
+                        <div class="mt-12 flex justify-center animate-fade-in border-t border-brand-800/30 pt-8">
+                            <button onClick={() => setShowAssessment(true)} class="bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-semibold py-4 px-12 rounded-xl shadow-[0_0_30px_rgba(139,92,246,0.3)] transition-all transform hover:scale-105 active:scale-95 flex items-center">
+                                <div class="mr-3"><Icons.ClipboardCheck /></div>
+                                Take Assessment Test
+                            </button>
+                        </div>
+                    )}
+
+                    {showAssessment && (
+                        <div class="mt-12 pt-8 border-t border-brand-800/30 relative">
+                            <AssessmentTest 
+                                role={targetRole}
+                                parsedData={parsedData}
+                                onTestComplete={(score) => {
+                                    setAssessmentScore(score);
+                                }} 
+                            />
+                            <div class="absolute bottom-0 right-0 flex justify-center mt-6 p-4">
+                                <button onClick={() => setShowAssessment(false)} class="text-xs font-medium text-gray-400 hover:text-white transition-colors bg-black/50 px-4 py-2 rounded-lg border border-white/5 mt-8">
+                                    Collapse Assessment Panel
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- RECOMMENDATIONS COMPONENT ---
+        const Recommendations = ({ parsedData }) => {
+            const [targetRole, setTargetRole] = useState('Software Engineer');
+            const [recommendationResult, setRecommendationResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const [activeTab, setActiveTab] = useState('courses');
+            const roles = ["Software Engineer", "Data Scientist", "Web Developer", "Mobile App Developer", "Cybersecurity Analyst"];
+
+            const fetchRecommendations = async () => {
+                if (!parsedData || !parsedData.skills) return;
+                setLoading(true);
+                setError(null);
+                try {
+                    const res = await fetch('/api/auth/recommendations', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            role: targetRole,
+                            parsed_data: parsedData
+                        })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Failed to fetch recommendations');
+                    setRecommendationResult(data);
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                fetchRecommendations();
+            }, [targetRole, parsedData]);
+
+            if (!parsedData || (!parsedData.skills && !parsedData.raw_text)) {
+                return (
+                    <div class="animate-fade-in flex flex-col items-center justify-center min-h-[400px]">
+                        <div class="glass-card p-8 rounded-2xl max-w-md text-center">
+                            <div class="inline-flex justify-center items-center w-16 h-16 rounded-full bg-brand-900/50 text-brand-400 mb-4">
+                                <Icons.Upload />
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">No Resume Data</h3>
+                            <p class="text-gray-400 mb-6">You need to upload and parse a resume first to get personalized learning recommendations!</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            const renderCards = (items) => {
+                if (!items || items.length === 0) {
+                    return <p class="text-sm text-gray-500 italic py-4">No resources found for this category based on your current gaps.</p>;
+                }
+                return (
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {items.map((item, idx) => (
+                            <div key={idx} class="glass-card rounded-xl p-6 transition-transform hover:scale-[1.02] cursor-pointer group flex flex-col h-full">
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-md tracking-wider ${
+                                        item.level === 'Beginner' ? 'bg-green-900/40 text-green-400 border border-green-500/20' :
+                                        item.level === 'Intermediate' ? 'bg-yellow-900/40 text-yellow-400 border border-yellow-500/20' :
+                                        'bg-red-900/40 text-red-400 border border-red-500/20'
+                                    }`}>
+                                        {item.level}
+                                    </span>
+                                    <span class="text-brand-400 opacity-50 group-hover:opacity-100 transition-opacity">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                    </span>
+                                </div>
+                                <h4 class="text-lg font-bold text-white mb-2 leading-tight">{item.title}</h4>
+                                <p class="text-sm text-gray-400 flex-1">{item.description}</p>
+                            </div>
+                        ))}
+                    </div>
+                );
+            };
+
+            return (
+                <div class="animate-fade-in space-y-6 pb-12">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <h2 class="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 tracking-tight drop-shadow-md pb-1">Upskilling Recommendations</h2>
+                        
+                        <div class="flex items-center space-x-3 bg-brand-900/30 p-2 rounded-xl backdrop-blur-md border border-brand-800/50">
+                            <span class="text-sm font-medium text-brand-300 pl-2">Target Role:</span>
+                            <select 
+                                value={targetRole} 
+                                onChange={(e) => setTargetRole(e.target.value)}
+                                class="bg-black/40 border border-brand-700/50 text-white text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 outline-none"
+                            >
+                                {roles.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    {error && (
+                        <div class="p-4 rounded-xl text-sm transition-all bg-red-900/40 text-red-300 border border-red-500/30">
+                            {error}
+                        </div>
+                    )}
+
+                    {loading || !recommendationResult ? (
+                        <div class="h-64 flex items-center justify-center">
+                            <svg class="animate-spin h-8 w-8 text-brand-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </div>
+                    ) : (
+                        <div class="space-y-6">
+                            {recommendationResult.missing_skills.length > 0 ? (
+                                <div class="glass-card p-4 rounded-xl mb-6">
+                                    <p class="text-sm text-gray-300">
+                                        Based on your profile, we identified <span class="font-bold text-white">{recommendationResult.missing_skills.length} missing skills</span> for this role. 
+                                        Here are curated resources to bridge the gap.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div class="glass-card p-4 rounded-xl mb-6 bg-green-900/20 border-green-500/20">
+                                    <p class="text-sm text-green-300">
+                                        Great job! You seem to match most standard requirements. Check out these advanced resources to stay ahead.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Tabs */}
+                            <div class="flex border-b border-brand-800/50">
+                                {['courses', 'certifications', 'learning_paths'].map(tab => (
+                                    <button 
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        class={`px-6 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === tab ? 'text-brand-400 border-brand-400 bg-brand-900/10' : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'}`}
+                                    >
+                                        {tab.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        <span class="ml-2 px-2 py-0.5 rounded-full text-xs bg-brand-900/50 text-brand-300">
+                                            {recommendationResult.recommendations[tab]?.length || 0}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div class="pt-4">
+                                {renderCards(recommendationResult.recommendations[activeTab])}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- USER PROFILE COMPONENT ---
+        const UserProfile = () => {
+            const [profile, setProfile] = useState({
+                name: '',
+                email: '',
+                college: '',
+                branch: '',
+                graduation_year: '',
+                skills: [],
+                certifications: []
+            });
+            const [loading, setLoading] = useState(true);
+            const [saving, setSaving] = useState(false);
+            const [message, setMessage] = useState({ type: '', text: '' });
+            
+            const email = localStorage.getItem('career_ai_email');
+
+            useEffect(() => {
+                if (email) {
+                    fetchProfile();
+                } else {
+                    setLoading(false);
+                    setMessage({ type: 'error', text: 'Authentication error. Please login again.' });
+                }
+            }, [email]);
+
+            const fetchProfile = async () => {
+                try {
+                    const res = await fetch('/api/auth/get-profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        setProfile(data);
+                    } else {
+                        setMessage({ type: 'error', text: data.error || 'Failed to fetch profile' });
+                    }
+                } catch (err) {
+                    setMessage({ type: 'error', text: err.message });
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleSave = async () => {
+                setSaving(true);
+                setMessage({ type: '', text: '' });
+                try {
+                    const res = await fetch('/api/auth/update-profile', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(profile)
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        setMessage({ type: 'success', text: 'Profile saved successfully!' });
+                    } else {
+                        setMessage({ type: 'error', text: data.error || 'Failed to save profile' });
+                    }
+                } catch (err) {
+                    setMessage({ type: 'error', text: err.message });
+                } finally {
+                    setSaving(false);
+                }
+            };
+
+            const handleChange = (e) => {
+                const { name, value } = e.target;
+                setProfile(prev => ({ ...prev, [name]: value }));
+            };
+
+            const addArrayItem = (field) => {
+                setProfile(prev => ({ ...prev, [field]: [...prev[field], ''] }));
+            };
+
+            const updateArrayItem = (field, index, value) => {
+                setProfile(prev => {
+                    const newArr = [...prev[field]];
+                    newArr[index] = value;
+                    return { ...prev, [field]: newArr };
+                });
+            };
+
+            const removeArrayItem = (field, index) => {
+                setProfile(prev => {
+                    const newArr = prev[field].filter((_, i) => i !== index);
+                    return { ...prev, [field]: newArr };
+                });
+            };
+
+            if (loading) {
+                return (
+                    <div class="h-64 flex items-center justify-center">
+                        <svg class="animate-spin h-8 w-8 text-brand-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </div>
+                );
+            }
+
+            return (
+                <div class="animate-fade-in space-y-6 pb-12 max-w-4xl mx-auto">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 tracking-tight drop-shadow-md pb-1">Your Profile</h2>
+                        <button 
+                            onClick={handleSave}
+                            disabled={saving}
+                            class="inline-flex items-center px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 shadow-[0_0_15px_rgba(139,92,246,0.3)]"
+                        >
+                            {saving ? 'Saving...' : 'Save Changes'}
+                        </button>
+                    </div>
+
+                    {message.text && (
+                        <div class={`p-4 rounded-xl text-sm transition-all ${message.type === 'error' ? 'bg-red-900/40 text-red-300 border border-red-500/30' : 'bg-green-900/40 text-green-300 border border-green-500/30'}`}>
+                            {message.text}
+                        </div>
+                    )}
+
+                    <div class="glass-card rounded-2xl p-8 space-y-8">
+                        <div>
+                            <h3 class="text-lg font-semibold text-white border-b border-brand-800/50 pb-2 mb-4">Basic Information</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-brand-300 mb-1">Full Name</label>
+                                    <input type="text" name="name" value={profile.name} onChange={handleChange} class="input-field w-full px-4 py-2.5 rounded-lg text-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-brand-300 mb-1">Email <span class="text-xs text-gray-500">(Read Only)</span></label>
+                                    <input type="email" name="email" value={profile.email} disabled class="input-field w-full px-4 py-2.5 rounded-lg text-sm opacity-50 cursor-not-allowed" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-white border-b border-brand-800/50 pb-2 mb-4">Education</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-brand-300 mb-1">College / University</label>
+                                    <input type="text" name="college" value={profile.college || ''} onChange={handleChange} placeholder="e.g., Stanford University" class="input-field w-full px-4 py-2.5 rounded-lg text-sm" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-brand-300 mb-1">Graduation Year</label>
+                                    <input type="text" name="graduation_year" value={profile.graduation_year || ''} onChange={handleChange} placeholder="e.g., 2024" class="input-field w-full px-4 py-2.5 rounded-lg text-sm" />
+                                </div>
+                                <div class="md:col-span-3">
+                                    <label class="block text-sm font-medium text-brand-300 mb-1">Branch / Degree</label>
+                                    <input type="text" name="branch" value={profile.branch || ''} onChange={handleChange} placeholder="e.g., B.S. Computer Science" class="input-field w-full px-4 py-2.5 rounded-lg text-sm" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between border-b border-brand-800/50 pb-2 mb-4">
+                                <h3 class="text-lg font-semibold text-white">Skills</h3>
+                                <button onClick={() => addArrayItem('skills')} class="text-xs font-medium text-brand-400 hover:text-brand-300 bg-brand-900/30 px-3 py-1.5 rounded-lg transition-colors">
+                                    + Add Skill
+                                </button>
+                            </div>
+                            {(!profile.skills || profile.skills.length === 0) && <p class="text-sm text-gray-500 italic mb-4">No skills added yet.</p>}
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {(profile.skills || []).map((skill, idx) => (
+                                    <div key={idx} class="flex items-center space-x-2">
+                                        <input type="text" value={skill} onChange={(e) => updateArrayItem('skills', idx, e.target.value)} class="input-field flex-1 px-4 py-2 rounded-lg text-sm" placeholder="e.g., Python" />
+                                        <button onClick={() => removeArrayItem('skills', idx)} class="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between border-b border-brand-800/50 pb-2 mb-4">
+                                <h3 class="text-lg font-semibold text-white">Certifications & Achievements</h3>
+                                <button onClick={() => addArrayItem('certifications')} class="text-xs font-medium text-brand-400 hover:text-brand-300 bg-brand-900/30 px-3 py-1.5 rounded-lg transition-colors">
+                                    + Add Certification
+                                </button>
+                            </div>
+                            {(!profile.certifications || profile.certifications.length === 0) && <p class="text-sm text-gray-500 italic mb-4">No certifications added yet.</p>}
+                            <div class="space-y-3">
+                                {(profile.certifications || []).map((cert, idx) => (
+                                    <div key={idx} class="flex items-center space-x-2">
+                                        <input type="text" value={cert} onChange={(e) => updateArrayItem('certifications', idx, e.target.value)} class="input-field flex-1 px-4 py-2 rounded-lg text-sm" placeholder="e.g., AWS Certified Solutions Architect" />
+                                        <button onClick={() => removeArrayItem('certifications', idx)} class="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+// --- ASSESSMENT TEST COMPONENT ---
+        const AssessmentTest = ({ role, parsedData, onTestComplete }) => {
+            const [selectedRole, setSelectedRole] = useState(role || "Software Engineer");
+
+            useEffect(() => {
+                if (role) setSelectedRole(role);
+            }, [role]);
+            const [testActive, setTestActive] = useState(false);
+            const [currentQIndex, setCurrentQIndex] = useState(0);
+            const [selectedOptions, setSelectedOptions] = useState({});
+            const [showResults, setShowResults] = useState(false);
+            const [loadingTest, setLoadingTest] = useState(false);
+            
+            const [questionPool, setQuestionPool] = useState([]);
+            const [activeSequence, setActiveSequence] = useState([]);
+            const [catStats, setCatStats] = useState({});
+            const [timeLeft, setTimeLeft] = useState(30);
+            const [currentDifficulty, setCurrentDifficulty] = useState("Medium");
+            const [finalScore, setFinalScore] = useState(null);
+            
+            const MAX_QUESTIONS = 10;
+            
+            const roles = ["Software Engineer", "Data Scientist", "Web Developer", "Mobile App Developer", "Cybersecurity Analyst"];
+
+            useEffect(() => {
+                const saved = localStorage.getItem('career_ai_assessmentResult');
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        if (parsed.finalScore && parsed.activeSequence) {
+                            setFinalScore(parsed.finalScore);
+                            setActiveSequence(parsed.activeSequence);
+                            setSelectedOptions(parsed.selectedOptions || {});
+                            if (parsed.selectedRole) setSelectedRole(parsed.selectedRole);
+                            setShowResults(true);
+                            if (onTestComplete) onTestComplete(parsed.finalScore.score);
+                        }
+                    } catch (e) {}
+                }
+            }, []);
+
+            const handleOptionSelect = (qIndex, selectedValue) => {
+                setSelectedOptions(prev => ({ ...prev, [qIndex]: selectedValue }));
+            };
+
+            useEffect(() => {
+                let timer;
+                if (testActive && !showResults) {
+                    timer = setInterval(() => {
+                        setTimeLeft(prev => {
+                            if (prev <= 1) {
+                                clearInterval(timer);
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
+                }
+                return () => clearInterval(timer);
+            }, [testActive, showResults, currentQIndex]);
+
+            useEffect(() => {
+                if (timeLeft === 0 && testActive && !showResults) {
+                    handleNextQuestion(true); // timed out
+                }
+            }, [timeLeft]);
+
+            const startTest = async () => {
+                localStorage.removeItem('career_ai_assessmentResult');
+                setLoadingTest(true);
+                setTestActive(false);
+                setShowResults(false);
+                setCatStats({});
+                
+                try {
+                    const skills = parsedData?.skills || [];
+                    const res = await fetch('/api/auth/generate-assessment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ skills })
+                    });
+                    
+                    const data = await res.json();
+                    let questions = data.questions || [];
+                    if (questions.length === 0) {
+                        alert("Could not load questions."); 
+                        setLoadingTest(false); 
+                        return;
+                    }
+                    
+                    const formattedDB = questions.map(q => ({
+                        ...q,
+                        correctString: q.options[q.answer],
+                        options: [...q.options].sort(() => 0.5 - Math.random())
+                    }));
+                    
+                    setQuestionPool(formattedDB);
+                    
+                    let firstPool = formattedDB.filter(q => q.difficulty === "Medium");
+                    if (firstPool.length === 0) firstPool = formattedDB;
+                    const firstQ = firstPool[Math.floor(Math.random() * firstPool.length)];
+                    
+                    setActiveSequence([firstQ]);
+                    setCurrentDifficulty(firstQ.difficulty || "Medium");
+                    
+                    setTestActive(true);
+                    setCurrentQIndex(0);
+                    setSelectedOptions({});
+                    setFinalScore(null);
+                    setTimeLeft(30);
+                } catch(e) { 
+                    console.error(e); 
+                    alert("An error occurred while generating questions.");
+                } finally { 
+                    setLoadingTest(false); 
+                }
+            };
+
+            const submitTestComplete = async (isCorrectVal) => {
+                let totalCorrect = 0;
+                let totalNum = activeSequence.length;
+                let newCatStats = { ...catStats };
+                
+                activeSequence.forEach((q, idx) => {
+                    const isCorrect = (idx === currentQIndex) ? isCorrectVal : (selectedOptions[idx] === q.correctString);
+                    if (isCorrect) totalCorrect++;
+                    
+                    if (idx === currentQIndex) {
+                        const cat = q.category || "general";
+                        if (!newCatStats[cat]) newCatStats[cat] = {total: 0, correct: 0};
+                        newCatStats[cat].total += 1;
+                        newCatStats[cat].correct += isCorrect ? 1 : 0;
+                    }
+                });
+
+                try {
+                    const res = await fetch('/api/auth/score-assessment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            correct_answers: totalCorrect,
+                            total_questions: totalNum,
+                            category_data: newCatStats
+                        })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        setFinalScore(data);
+                        if (onTestComplete) onTestComplete(data.score);
+                        
+                        localStorage.setItem('career_ai_assessmentResult', JSON.stringify({
+                            finalScore: data,
+                            activeSequence: activeSequence,
+                            selectedOptions: selectedOptions,
+                            selectedRole: selectedRole
+                        }));
+                    }
+                } catch (err) {}
+                
+                setCatStats(newCatStats);
+                setShowResults(true);
+                setTestActive(false);
+            };
+
+            const handleNextQuestion = (isTimeout = false) => {
+                const currentQ = activeSequence[currentQIndex];
+                const selectedOpt = selectedOptions[currentQIndex];
+                const isCorrect = !isTimeout && (selectedOpt === currentQ.correctString);
+                
+                if (activeSequence.length >= MAX_QUESTIONS || activeSequence.length >= questionPool.length) {
+                    submitTestComplete(isCorrect);
+                    return;
+                }
+                
+                setCatStats(prev => {
+                    const cat = currentQ.category || "general";
+                    const stats = prev[cat] || { total: 0, correct: 0 };
+                    return { ...prev, [cat]: { total: stats.total + 1, correct: stats.correct + (isCorrect ? 1 : 0) } };
+                });
+
+                let nextDiff = "Medium";
+                if (isCorrect) nextDiff = currentQ.difficulty === "Easy" ? "Medium" : "Hard";
+                else nextDiff = currentQ.difficulty === "Hard" ? "Medium" : "Easy";
+
+                const usedQs = activeSequence.map(q => q.q);
+                let available = questionPool.filter(q => !usedQs.includes(q.q));
+                let specificPool = available.filter(q => q.difficulty === nextDiff);
+                if (specificPool.length === 0) specificPool = available; 
+                
+                if (specificPool.length === 0) {
+                     submitTestComplete(isCorrect);
+                     return;
+                }
+                
+                const nextQ = specificPool[Math.floor(Math.random() * specificPool.length)];
+                
+                setActiveSequence(prev => [...prev, nextQ]);
+                setCurrentDifficulty(nextQ.difficulty || nextDiff);
+                setCurrentQIndex(prev => prev + 1);
+                setTimeLeft(30);
+            };
+
+            return (
+                <div class="animate-fade-in space-y-6 pb-12">
+                    <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div class="flex flex-col space-y-2">
+                            <h2 class="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 tracking-tight drop-shadow-md pb-1">Interview Readiness Assessment</h2>
+                            {parsedData?.skills && parsedData.skills.length > 0 && (
+                                <div class="flex flex-wrap gap-2 mt-1">
+                                    {parsedData.skills.slice(0, 5).map(skill => (
+                                        <span key={skill} class="bg-brand-900/40 border border-brand-500/30 text-brand-300 px-3 py-1 rounded-md text-[10px] sm:text-xs font-semibold uppercase tracking-wider">{skill}</span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        
+                        {!testActive && !role && (
+                            <div class="flex items-center space-x-3 bg-brand-900/30 p-2 rounded-xl backdrop-blur-md border border-brand-800/50">
+                                <span class="text-sm font-medium text-brand-300 pl-2">Target Role:</span>
+                                <select 
+                                    value={selectedRole} 
+                                    onChange={(e) => setSelectedRole(e.target.value)}
+                                    class="bg-black/40 border border-brand-700/50 text-white text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 outline-none tracking-wide"
+                                >
+                                    {roles.map(r => <option key={r} value={r}>{r}</option>)}
+                                </select>
+                            </div>
+                        )}
+                    </div>
+
+                    {!testActive && !showResults ? (
+                        <div class="glass-card rounded-2xl p-8 text-center max-w-2xl mx-auto mt-12 shadow-[0_0_40px_rgba(109,40,217,0.15)] relative overflow-hidden">
+                            <div class="absolute -top-24 -right-24 w-48 h-48 bg-brand-600/20 rounded-full blur-3xl pointer-events-none"></div>
+                            
+                            <div class="relative z-10">
+                                <div class="w-20 h-20 bg-brand-900/50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-brand-500/30 shadow-[0_0_20px_rgba(139,92,246,0.3)] text-brand-400">
+                                    <Icons.ClipboardCheck /> 
+                                </div>
+                                <h3 class="text-2xl font-bold text-white mb-3">Test your {selectedRole} Skills</h3>
+                                <p class="text-gray-400 mb-8 max-w-md mx-auto leading-relaxed">
+                                    Take a standardized technical assessment designed to gauge your interview readiness and core conceptual mastery.
+                                </p>
+                                <button onClick={startTest} disabled={loadingTest} class="bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-semibold py-3 px-10 rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50">
+                                    {loadingTest ? 'Generating...' : 'Start Assessment'}
+                                </button>
+                            </div>
+                        </div>
+                    ) : showResults ? (
+                        <div class="glass-card rounded-2xl p-8 max-w-3xl mx-auto text-center border-t-4 border-t-brand-500 relative overflow-hidden mt-8">
+                            <h3 class="text-3xl font-bold text-white mb-2">Assessment Results</h3>
+                            <p class="text-brand-300 mb-6">{selectedRole}</p>
+                            
+                            {finalScore && finalScore.category_scores && (
+                                <div class="flex flex-wrap justify-center gap-3 mb-8 max-w-xl mx-auto">
+                                    {Object.entries(finalScore.category_scores).map(([cat, score]) => (
+                                        <div key={cat} class="bg-black/30 border border-brand-800/50 rounded-lg px-4 py-2 flex items-center space-x-3">
+                                            <span class="text-xs text-brand-300 uppercase tracking-widest">{cat}</span>
+                                            <span class={`font-bold ${score >= 75 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>{score}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div class="relative w-48 h-48 mx-auto mb-8 flex items-center justify-center">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                    <path class="text-brand-900/50" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    <path class={`${finalScore?.score >= 75 ? 'text-green-500' : finalScore?.score >= 50 ? 'text-yellow-500' : 'text-red-500'} drop-shadow-[0_0_8px_currentColor] transition-all duration-1000 ease-out`} stroke-dasharray={`${finalScore?.score || 0}, 100`} stroke-width="3" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span class="text-4xl font-bold text-white">{finalScore ? `${finalScore.score}%` : '...'}</span>
+                                    <span class="text-sm font-medium text-brand-300 mt-2">{finalScore ? finalScore.readiness : ''}</span>
+                                </div>
+                            </div>
+                            
+                            <p class="text-lg text-gray-300 mb-8">
+                                {finalScore?.readiness === "High readiness" ? "Excellent score! You exhibit strong technical readiness for interviews." :
+                                 finalScore?.readiness === "Medium readiness" ? "Solid foundation! A little more review of fundamental concepts and you'll crush it." :
+                                 "Needs improvement. Consider focused technical review sessions for these core topics."}
+                            </p>
+                            
+                            {activeSequence.length > 0 && (
+                                <div class="mb-8 text-left max-w-2xl mx-auto space-y-4 pt-6 mt-6 border-t border-brand-800/30">
+                                    <h4 class="text-white font-semibold mb-4 text-xl flex items-center">
+                                        <svg class="w-5 h-5 text-brand-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                                        Detailed Feedback
+                                    </h4>
+                                    {activeSequence.map((wq, i) => {
+                                        const isCorrect = selectedOptions[i] === wq.correctString;
+                                        return (
+                                            <div key={i} class={`p-5 rounded-xl border ${isCorrect ? 'bg-green-900/10 border-green-500/20' : 'bg-red-900/10 border-red-500/20'} backdrop-blur-md`}>
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <p class="text-sm text-gray-200 font-medium pr-4">{i + 1}. {wq.q}</p>
+                                                    <span class={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border flex-shrink-0 ${wq.difficulty === 'Hard' ? 'bg-red-900/30 text-red-500 border-red-500/30' : wq.difficulty === 'Medium' ? 'bg-yellow-900/30 text-yellow-500 border-yellow-500/30' : 'bg-green-900/30 text-green-500 border-green-500/30'}`}>{wq.difficulty || 'Normal'}</span>
+                                                </div>
+                                                <div class="flex flex-col space-y-1 mb-3">
+                                                    <span class="text-xs text-brand-300">Your Answer: <span class={isCorrect ? "text-green-400 font-bold" : "text-red-400 font-bold"}>{selectedOptions[i] || 'None (Time Out)'}</span></span>
+                                                    {!isCorrect && <span class="text-xs text-gray-400">Correct Answer: <span class="text-green-400">{wq.correctString}</span></span>}
+                                                </div>
+                                                {wq.explanation && (
+                                                    <div class="mt-3 text-xs text-brand-200 bg-brand-900/20 p-3 rounded-lg border border-brand-800/40 flex items-start space-x-2">
+                                                        <div class="mt-0.5 text-brand-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
+                                                        <span class="leading-relaxed">{wq.explanation}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                            
+                            <button onClick={startTest} disabled={loadingTest} class="bg-brand-900/50 hover:bg-brand-800/60 text-white font-medium py-2.5 px-6 rounded-lg border border-brand-500/30 transition-all disabled:opacity-50">
+                                {loadingTest ? 'Generating...' : 'Retake Test'}
+                            </button>
+                        </div>
+                    ) : (
+                        <div class="glass-card rounded-2xl overflow-hidden max-w-3xl mx-auto mt-6 border border-brand-800/30 shadow-lg">
+                            <div class="bg-black/40 p-4 border-b border-brand-800/40 flex justify-between items-center px-6">
+                                <div class="flex items-center space-x-4">
+                                    <span class="text-brand-300 text-sm font-semibold uppercase tracking-wider">{activeSequence[currentQIndex]?.category}</span>
+                                    <span class={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border shadow-inner ${currentDifficulty === 'Hard' ? 'bg-red-900/30 text-red-500 border-red-500/30' : currentDifficulty === 'Medium' ? 'bg-yellow-900/30 text-yellow-500 border-yellow-500/30' : 'bg-green-900/30 text-green-500 border-green-500/30'}`}>{currentDifficulty}</span>
+                                </div>
+                                <div class="flex items-center space-x-6">
+                                    <div class={`font-mono font-bold px-3 py-1 rounded-md text-sm transition-all ${timeLeft <= 5 ? 'text-red-400 bg-red-900/30 animate-pulse border border-red-500/30' : 'text-gray-300 bg-black/40 border border-gray-700/50'}`}>
+                                        00:{timeLeft.toString().padStart(2, '0')}
+                                    </div>
+                                    <div class="hidden sm:flex flex-col w-32 ml-4">
+                                        <div class="flex justify-between text-[10px] text-brand-300 font-bold uppercase tracking-widest mb-1.5">
+                                            <span>Progress</span>
+                                            <span>{currentQIndex + 1}/{MAX_QUESTIONS}</span>
+                                        </div>
+                                        <div class="w-full h-2 bg-gray-800/80 rounded-full overflow-hidden shadow-inner border border-gray-700/50">
+                                            <div class="h-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-500 ease-out relative" style={{ width: `${((currentQIndex + 1) / MAX_QUESTIONS) * 100}%` }}>
+                                                <div class="absolute top-0 right-0 bottom-0 left-0 opacity-50" style={{ backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent)', backgroundSize: '1rem 1rem' }}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="p-8">
+                                <h3 class="text-xl font-medium text-white mb-8 leading-relaxed">
+                                    <span class="text-brand-500 font-bold mr-3">{currentQIndex + 1}.</span>
+                                    {activeSequence[currentQIndex]?.q}
+                                </h3>
+                                
+                                <div class="space-y-3 mb-8">
+                                    {activeSequence[currentQIndex]?.options.map((opt, idx) => (
+                                        <button 
+                                            key={idx}
+                                            onClick={() => handleOptionSelect(currentQIndex, opt)}
+                                            class={`w-full text-left px-6 py-4 rounded-xl border transition-all duration-200 flex items-center ${selectedOptions[currentQIndex] === opt ? 'bg-brand-900/40 border-brand-400 shadow-[0_0_15px_rgba(139,92,246,0.15)]' : 'bg-black/20 border-white/5 hover:border-white/10 hover:bg-black/30'}`}
+                                        >
+                                            <div class={`w-5 h-5 rounded-full border flex-shrink-0 mr-4 flex items-center justify-center transition-colors ${selectedOptions[currentQIndex] === opt ? 'border-brand-400 bg-brand-500/20' : 'border-gray-500'}`}>
+                                                {selectedOptions[currentQIndex] === opt && <div class="w-2.5 h-2.5 bg-brand-400 rounded-full shadow-[0_0_5px_theme(colors.brand.400)]"></div>}
+                                            </div>
+                                            <span class={`text-[15px] ${selectedOptions[currentQIndex] === opt ? 'text-white font-medium' : 'text-gray-300'}`}>{opt}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                                
+                                <div class="flex justify-between items-center pt-6 border-t border-white/5">
+                                    <div class="text-xs text-gray-500">Question {currentQIndex + 1} of {MAX_QUESTIONS}</div>
+                                    
+                                    <button 
+                                        onClick={() => handleNextQuestion(false)}
+                                        disabled={selectedOptions[currentQIndex] === undefined}
+                                        class="bg-brand-600 hover:bg-brand-500 text-white font-medium py-2 px-8 rounded-lg transition-colors disabled:opacity-50 shadow-[0_0_15px_rgba(139,92,246,0.3)] cursor-pointer"
+                                    >
+                                        {currentQIndex === MAX_QUESTIONS - 1 ? 'Submit Test' : 'Next Question'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- DASHBOARD COMPONENT ---
+        const DashboardApp = ({ onLogout }) => {
+            const [activePage, setActivePage] = useState('Dashboard'); // Default to Dashboard
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+            
+            // Resume Upload State
+            const [file, setFile] = useState(null);
+            const [isDragging, setIsDragging] = useState(false);
+            const [parsing, setParsing] = useState(false);
+            const [parsedData, setParsedData] = useState(null);
+            const [uploadError, setUploadError] = useState(null);
+            const [assessmentResults, setAssessmentResults] = useState(null);
+
+            const navItems = [
+                { name: 'Dashboard', icon: Icons.Dashboard },
+                { name: 'Upload Resume', icon: Icons.Upload },
+                { name: 'Skill Gap Analysis', icon: Icons.Chart },
+                { name: 'Interview Predictor', icon: Icons.Brain },
+                { name: 'Recommendations', icon: Icons.Star },
+                { name: 'Profile', icon: Icons.User }
+            ];
+
+            const navigate = (page) => {
+                setActivePage(page);
+                setSidebarOpen(false); // Close mobile sidebar on navigate
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                setIsDragging(true);
+            };
+
+            const handleDragLeave = (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const droppedFile = e.dataTransfer.files[0];
+                if (droppedFile && droppedFile.type === 'application/pdf') {
+                    setFile(droppedFile);
+                    setUploadError(null);
+                } else {
+                    setUploadError("Please upload a valid PDF file.");
+                }
+            };
+            
+            const handleFileChange = (e) => {
+                const selectedFile = e.target.files[0];
+                if (selectedFile && selectedFile.type === 'application/pdf') {
+                    setFile(selectedFile);
+                    setUploadError(null);
+                } else {
+                    setUploadError("Please upload a valid PDF file.");
+                }
+            };
+
+            const parseResume = async () => {
+                if (!file) return;
+                setParsing(true);
+                setUploadError(null);
+                
+                const formData = new FormData();
+                formData.append('resume', file);
+                
+                try {
+                    const token = localStorage.getItem('career_ai_token');
+                    const response = await fetch('/api/auth/upload-resume', {
+                        method: 'POST',
+                        // Don't set Content-Type header, let browser set it with boundary for FormData
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Parsing failed');
+                    
+                    setParsedData(data.data);
+                } catch(err) {
+                    setUploadError(err.message);
+                } finally {
+                    setParsing(false);
+                }
+            };
+            
+            const loadDemoData = () => {
+                setParsedData({
+                    summary: "Passionate Software Engineer with a focus on scalable web architectures.",
+                    skills: ["Python", "HTML", "CSS"],
+                    projects: "1. Python Data Pipeline (Built extensive streaming API ingestion tools).\n2. HTML/CSS Portfolio (Responsive grid UI redesign for multiple endpoints).",
+                    certifications: "1. Certified Frontend Developer (Industry Standard Assessment)",
+                    raw_text: "I lead squad discussions, oversee sprints efficiently, and present roadmaps natively."
+                });
+            };
+
+            const renderContent = () => {
+                switch(activePage) {
+                    case 'Dashboard':
+                        const userName = localStorage.getItem('career_ai_name') || 'User';
+                        return (
+                            <div class="space-y-16 animate-fade-in pb-16">
+                                {/* Personalized Welcome Section */}
+                                <div class="w-full text-center pt-8 md:pt-12 mb-2 animate-fade-in">
+                                    <h1 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-3">
+                                        Welcome, <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-400 to-pink-400 pb-1 inline-block drop-shadow-md">{userName}</span> 👋
+                                    </h1>
+                                    <p class="text-gray-400 text-base md:text-lg font-medium">
+                                        Let’s continue building your career today.
+                                    </p>
+                                </div>
+
+                                {/* Hero Section */}
+                                <div class="flex flex-col items-center text-center pt-4 md:pt-8">
+                                    <div class="inline-flex items-center px-4 py-2 rounded-full border border-brand-500/30 bg-brand-900/40 shadow-[0_0_25px_rgba(139,92,246,0.2)] mb-8">
+                                        <span class="w-2 h-2 rounded-full bg-brand-400 mr-2 animate-pulse"></span>
+                                        <span class="text-xs font-bold text-brand-300 uppercase tracking-wider">AI-Powered Career Intelligence</span>
+                                    </div>
+                                    
+                                    <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white mb-6 leading-[1.1] max-w-4xl">
+                                        Decode Your <br class="md:hidden" /><span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-400 via-pink-400 to-blue-400 drop-shadow-lg">Career Potential</span>
+                                    </h1>
+                                    
+                                    <p class="text-base md:text-xl text-gray-400 max-w-2xl px-4 mb-10 leading-relaxed font-medium">
+                                        Leverage advanced machine learning to identify skill gaps, predict interview success, and generate personalized upskilling roadmaps in seconds.
+                                    </p>
+                                    
+                                    <div class="flex flex-col sm:flex-row gap-4 px-4 w-full justify-center">
+                                        <button 
+                                            onClick={() => navigate('Upload Resume')}
+                                            class="bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 hover:from-brand-500 hover:via-brand-400 hover:to-brand-500 text-white font-bold py-4 px-10 rounded-xl shadow-[0_0_30px_rgba(139,92,246,0.5)] transition-all transform hover:scale-105 hover:-translate-y-1 w-full sm:w-auto"
+                                        >
+                                            Upload Resume
+                                        </button>
+                                        <button 
+                                            onClick={() => navigate('Skill Gap Analysis')}
+                                            class="bg-white/10 hover:bg-white/15 text-white border border-white/20 font-bold py-4 px-10 rounded-xl transition-all backdrop-blur-md shadow-[0_0_20px_rgba(255,255,255,0.05)] w-full sm:w-auto hover:-translate-y-1"
+                                        >
+                                            Try Skill Analyzer
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Stats Section */}
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto px-4">
+                                    <div class="glass-card rounded-2xl p-8 text-center relative overflow-hidden group">
+                                        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-600 to-brand-400"></div>
+                                        <div class="absolute -top-12 -right-12 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl group-hover:bg-brand-500/20 transition-all"></div>
+                                        <div class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400 mb-2 drop-shadow-md">10K+</div>
+                                        <div class="text-sm font-bold text-brand-300 uppercase tracking-widest mt-4">Resumes Analyzed</div>
+                                    </div>
+                                    <div class="glass-card rounded-2xl p-8 text-center relative overflow-hidden group">
+                                        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-pink-600 to-pink-400"></div>
+                                        <div class="absolute -top-12 -right-12 w-32 h-32 bg-pink-500/10 rounded-full blur-2xl group-hover:bg-pink-500/20 transition-all"></div>
+                                        <div class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400 mb-2 drop-shadow-md">95%</div>
+                                        <div class="text-sm font-bold text-pink-300 uppercase tracking-widest mt-4">Accuracy Rate</div>
+                                    </div>
+                                    <div class="glass-card rounded-2xl p-8 text-center relative overflow-hidden group">
+                                        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 to-blue-400"></div>
+                                        <div class="absolute -top-12 -right-12 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
+                                        <div class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400 mb-2 drop-shadow-md">500+</div>
+                                        <div class="text-sm font-bold text-blue-300 uppercase tracking-widest mt-4">Career Paths</div>
+                                    </div>
+                                </div>
+
+                                {/* Features Section */}
+                                <div class="max-w-6xl mx-auto px-4 pt-12">
+                                    <div class="text-center mb-16">
+                                        <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-4">Powerful Features</h2>
+                                        <p class="text-lg text-gray-400 max-w-2xl mx-auto">Everything you need to land your dream tech job, powered by sophisticated AI algorithms.</p>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                        <div class="glass-card rounded-3xl p-8 transition-all duration-300 hover:shadow-[0_0_30px_rgba(139,92,246,0.15)] hover:border-brand-500/30 group hover:-translate-y-2 relative overflow-hidden flex flex-col items-center text-center">
+                                            <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none transform translate-x-4 -translate-y-4 group-hover:opacity-10 transition-opacity">
+                                                <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M8 13v-1m4 1v-3m4 3V8M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+                                            </div>
+                                            <div class="h-16 w-16 rounded-2xl bg-brand-900/50 border border-brand-500/30 flex items-center justify-center text-brand-400 mb-6 group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(139,92,246,0.2)] relative z-10">
+                                                <Icons.Chart />
+                                            </div>
+                                            <h3 class="text-xl font-bold text-white mb-4 relative z-10">Skill Gap Analyzer</h3>
+                                            <p class="text-gray-400 text-sm leading-relaxed relative z-10">
+                                                Match your qualifications against real-time industry-standard job descriptions to pinpoint exactly what you need to learn.
+                                            </p>
+                                        </div>
+                                        
+                                        <div class="glass-card rounded-3xl p-8 transition-all duration-300 hover:shadow-[0_0_30px_rgba(236,72,153,0.15)] hover:border-pink-500/30 group hover:-translate-y-2 relative overflow-hidden flex flex-col items-center text-center">
+                                            <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none transform translate-x-4 -translate-y-4 group-hover:opacity-10 transition-opacity">
+                                                <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                                            </div>
+                                            <div class="h-16 w-16 rounded-2xl bg-pink-900/50 border border-pink-500/30 flex items-center justify-center text-pink-400 mb-6 group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(236,72,153,0.2)] relative z-10">
+                                                <Icons.Brain />
+                                            </div>
+                                            <h3 class="text-xl font-bold text-white mb-4 relative z-10">Interview Risk Predictor</h3>
+                                            <p class="text-gray-400 text-sm leading-relaxed relative z-10">
+                                                Anticipate your selection probability and identify structural weak areas before the actual technical rounds even begin.
+                                            </p>
+                                        </div>
+                                        
+                                        <div class="glass-card rounded-3xl p-8 transition-all duration-300 hover:shadow-[0_0_30px_rgba(59,130,246,0.15)] hover:border-blue-500/30 group hover:-translate-y-2 relative overflow-hidden flex flex-col items-center text-center">
+                                            <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none transform translate-x-4 -translate-y-4 group-hover:opacity-10 transition-opacity">
+                                                <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                                            </div>
+                                            <div class="h-16 w-16 rounded-2xl bg-blue-900/50 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(59,130,246,0.2)] relative z-10">
+                                                <Icons.Star />
+                                            </div>
+                                            <h3 class="text-xl font-bold text-white mb-4 relative z-10">Career Recommendations</h3>
+                                            <p class="text-gray-400 text-sm leading-relaxed relative z-10">
+                                                Receive highly curated lists of courses, certifications, and learning paths tailored to perfectly bridge your exact skill gaps.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* How It Works Section */}
+                                <div class="max-w-4xl mx-auto px-4 pt-16 pb-8">
+                                    <div class="text-center mb-16">
+                                        <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-4">How It Works</h2>
+                                        <p class="text-lg text-gray-400">Five simple steps to unlock your career potential</p>
+                                    </div>
+                                    
+                                    <div class="relative">
+                                        <div class="hidden md:block absolute left-[3.25rem] top-8 bottom-8 w-1 bg-gradient-to-b from-brand-600 via-pink-600 to-green-600 opacity-20 rounded-full"></div>
+                                        <div class="space-y-6 relative">
+                                            
+                                            <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start group">
+                                                <div class="shrink-0 relative">
+                                                    <div class="w-20 h-20 rounded-3xl bg-brand-900/40 border border-brand-500/30 shadow-[0_0_30px_rgba(139,92,246,0.15)] flex items-center justify-center relative z-10 group-hover:scale-110 transition-transform duration-300 text-brand-400">
+                                                        <Icons.Upload />
+                                                        <span class="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-brand-500 border-2 border-[#110e1b] text-white text-sm font-black flex items-center justify-center shadow-lg">1</span>
+                                                    </div>
+                                                </div>
+                                                <div class="glass-card rounded-2xl p-6 md:p-8 flex-1 group-hover:border-brand-500/50 transition-colors shadow-lg text-center md:text-left w-full">
+                                                    <h4 class="text-xl font-bold text-white mb-2">Upload Resume</h4>
+                                                    <p class="text-base text-gray-400 leading-relaxed">Simply attach your latest PDF resume. Our system securely parses and digests the text instantly.</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start group">
+                                                <div class="shrink-0 relative">
+                                                    <div class="w-20 h-20 rounded-3xl bg-pink-900/40 border border-pink-500/30 shadow-[0_0_30px_rgba(236,72,153,0.15)] flex items-center justify-center text-pink-400 relative z-10 group-hover:scale-110 transition-transform duration-300">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                                        <span class="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-pink-500 border-2 border-[#110e1b] text-white text-sm font-black flex items-center justify-center shadow-lg">2</span>
+                                                    </div>
+                                                </div>
+                                                <div class="glass-card rounded-2xl p-6 md:p-8 flex-1 group-hover:border-pink-500/50 transition-colors shadow-lg text-center md:text-left w-full">
+                                                    <h4 class="text-xl font-bold text-white mb-2">AI Extracts Skills</h4>
+                                                    <p class="text-base text-gray-400 leading-relaxed">Our proprietary NLP engine parses your diverse experience, intelligently identifying technical skills and nuances.</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start group">
+                                                <div class="shrink-0 relative">
+                                                    <div class="w-20 h-20 rounded-3xl bg-blue-900/40 border border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.15)] flex items-center justify-center text-blue-400 relative z-10 group-hover:scale-110 transition-transform duration-300">
+                                                        <Icons.Chart />
+                                                        <span class="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-blue-500 border-2 border-[#110e1b] text-white text-sm font-black flex items-center justify-center shadow-lg">3</span>
+                                                    </div>
+                                                </div>
+                                                <div class="glass-card rounded-2xl p-6 md:p-8 flex-1 group-hover:border-blue-500/50 transition-colors shadow-lg text-center md:text-left w-full">
+                                                    <h4 class="text-xl font-bold text-white mb-2">Skill Gap Analysis</h4>
+                                                    <p class="text-base text-gray-400 leading-relaxed">Select a target role and view an interactive, detailed radar chart flawlessly plotting your mastery against industry-standard benchmarks.</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start group">
+                                                <div class="shrink-0 relative">
+                                                    <div class="w-20 h-20 rounded-3xl bg-purple-900/40 border border-purple-500/30 shadow-[0_0_30px_rgba(168,85,247,0.15)] flex items-center justify-center text-purple-400 relative z-10 group-hover:scale-110 transition-transform duration-300">
+                                                        <Icons.Brain /> 
+                                                        <span class="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-purple-500 border-2 border-[#110e1b] text-white text-sm font-black flex items-center justify-center shadow-lg">4</span>
+                                                    </div>
+                                                </div>
+                                                <div class="glass-card rounded-2xl p-6 md:p-8 flex-1 group-hover:border-purple-500/50 transition-colors shadow-lg text-center md:text-left w-full">
+                                                    <h4 class="text-xl font-bold text-white mb-2">Interview Prediction</h4>
+                                                    <p class="text-base text-gray-400 leading-relaxed">Take quick conceptual assessment tests to gauge readiness and combine it with your parsed resume data to scientifically predict outcomes.</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start group">
+                                                <div class="shrink-0 relative">
+                                                    <div class="w-20 h-20 rounded-3xl bg-green-900/40 border border-green-500/30 shadow-[0_0_30px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-400 relative z-10 group-hover:scale-110 transition-transform duration-300">
+                                                        <Icons.Star />
+                                                        <span class="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-green-500 border-2 border-[#110e1b] text-white text-sm font-black flex items-center justify-center shadow-lg">5</span>
+                                                    </div>
+                                                </div>
+                                                <div class="glass-card rounded-2xl p-6 md:p-8 flex-1 group-hover:border-green-500/50 transition-colors shadow-lg text-center md:text-left w-full">
+                                                    <h4 class="text-xl font-bold text-white mb-2">Get Recommendations</h4>
+                                                    <p class="text-base text-gray-400 leading-relaxed">Instantly receive highly actionable, curated resources perfectly designed to close your skill gaps.</p>
+                                                </div>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    case 'Upload Resume':
+                        return (
+                            <div class="animate-fade-in space-y-6">
+                                <div class="flex items-center justify-between">
+                                    <h2 class="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 tracking-tight drop-shadow-md pb-1">Upload Resume</h2>
+                                    {parsedData && (
+                                        <button onClick={() => {setParsedData(null); setFile(null);}} class="text-sm text-brand-400 hover:text-white transition-colors">
+                                            Upload New Document
+                                        </button>
+                                    )}
+                                </div>
+                                
+                                {!parsedData ? (
+                                    <div class="glass-card rounded-2xl p-8 max-w-4xl mx-auto mt-8">
+                                        <div 
+                                            class={`border-2 border-dashed rounded-xl p-12 text-center transition-all ${isDragging ? 'border-brand-400 bg-brand-900/20' : 'border-gray-600 hover:border-brand-500'}`}
+                                            onDragOver={handleDragOver}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={handleDrop}
+                                        >
+                                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-800/30 text-brand-400 mb-6">
+                                                <Icons.Upload />
+                                            </div>
+                                            <h3 class="text-xl font-medium text-white mb-2">Drag & Drop your Resume</h3>
+                                            <p class="text-gray-400 text-sm mb-6">Only PDF files are supported, up to 5MB.</p>
+                                            
+                                            <input 
+                                                type="file" 
+                                                id="file-upload" 
+                                                class="hidden" 
+                                                accept=".pdf"
+                                                onChange={handleFileChange}
+                                            />
+                                            <label 
+                                                for="file-upload" 
+                                                class="cursor-pointer inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-brand-600 hover:bg-brand-500 transition-colors"
+                                            >
+                                                Browse Files
+                                            </label>
+                                            
+                                            <div class="mt-8 flex justify-center">
+                                                <button 
+                                                    onClick={loadDemoData}
+                                                    type="button"
+                                                    class="inline-flex items-center justify-center px-6 py-3 border border-brand-500/50 text-sm font-medium rounded-lg text-brand-300 bg-brand-900/30 hover:bg-brand-900/50 transition-all w-full max-w-xs"
+                                                >
+                                                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> 
+                                                    Load Sample Demo Resume
+                                                </button>
+                                            </div>
+                                            
+                                            {file && (
+                                                <div class="mt-8 p-4 bg-black/20 rounded-lg flex items-center justify-between">
+                                                    <div class="flex items-center truncate">
+                                                        <svg class="w-6 h-6 text-brand-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                                        <span class="text-white truncate">{file.name}</span>
+                                                    </div>
+                                                    <button onClick={() => setFile(null)} class="text-red-400 hover:text-red-300 ml-4">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        {uploadError && (
+                                            <div class="mt-4 p-3 bg-red-900/40 border border-red-500/50 rounded-lg text-red-200 text-sm text-center">
+                                                {uploadError}
+                                            </div>
+                                        )}
+                                        
+                                        {file && !uploadError && (
+                                            <div class="mt-6 flex justify-end">
+                                                <button 
+                                                    onClick={parseResume}
+                                                    disabled={parsing}
+                                                    class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-brand-500 hover:bg-brand-400 shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all disabled:opacity-50"
+                                                >
+                                                    {parsing ? (
+                                                        <><svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Analyzing Document...</>
+                                                    ) : 'Extract AI Insights'}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in mt-6">
+                                        <div class="lg:col-span-2 space-y-6">
+                                            <div class="glass-card rounded-2xl p-6 border-t-4 border-t-brand-500">
+                                                <div class="flex items-center text-brand-300 mb-4">
+                                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                    <h3 class="font-semibold text-white">Professional Summary</h3>
+                                                </div>
+                                                <p class="text-gray-300 text-sm leading-relaxed">{parsedData.summary || "No summary specifically identified. Try refining your document."}</p>
+                                            </div>
+                                            
+                                            <div class="glass-card rounded-2xl p-6">
+                                                <h3 class="font-semibold text-white mb-4">Detected Projects</h3>
+                                                {parsedData.projects ? (
+                                                    <div class="bg-black/20 rounded-lg p-4 text-sm text-gray-300 whitespace-pre-wrap font-mono">{parsedData.projects}</div>
+                                                ) : (
+                                                    <p class="text-sm text-gray-500 italic">No projects explicitly detected.</p>
+                                                )}
+                                            </div>
+                                            
+                                            <div class="glass-card rounded-2xl p-6">
+                                                <h3 class="font-semibold text-white mb-4">Certifications & Licenses</h3>
+                                                {parsedData.certifications ? (
+                                                    <div class="bg-black/20 rounded-lg p-4 text-sm text-gray-300 whitespace-pre-wrap font-mono">{parsedData.certifications}</div>
+                                                ) : (
+                                                    <p class="text-sm text-gray-500 italic">No certifications explicitly detected.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="space-y-6">
+                                            <div class="glass-card rounded-2xl p-6">
+                                                <div class="flex items-center justify-between mb-4">
+                                                    <h3 class="font-semibold text-white">Extracted Skills</h3>
+                                                    <span class="bg-brand-900/50 text-brand-300 text-xs py-1 px-2 rounded-md font-bold">{parsedData.skills.length}</span>
+                                                </div>
+                                                
+                                                <div class="flex flex-wrap gap-2 mt-4">
+                                                    {parsedData.skills.length > 0 ? parsedData.skills.map(skill => (
+                                                        <span key={skill} class="bg-brand-600/20 border border-brand-500/30 text-brand-300 text-xs px-3 py-1.5 rounded-full backdrop-blur-sm">
+                                                            {skill}
+                                                        </span>
+                                                    )) : (
+                                                        <p class="text-sm text-gray-500 italic">No skills extracted.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="glass-card rounded-2xl p-6 border border-brand-600/30 bg-brand-900/10">
+                                                <h3 class="font-semibold text-white mb-2">AI Suggestion</h3>
+                                                <p class="text-sm text-gray-300">Head over to the <button onClick={() => setActivePage('Skill Gap Analysis')} class="text-brand-400 hover:underline inline-flex">Skill Gap Analysis</button> tab to compare these extracted skills against real job descriptions.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    case 'Skill Gap Analysis':
+                        return <SkillGapAnalysis parsedData={parsedData} />;
+                    case 'Interview Predictor':
+                        return <InterviewPredictor parsedData={parsedData} />;
+                    case 'Recommendations':
+                        return <Recommendations parsedData={parsedData} />;
+                    case 'Profile':
+                        return <UserProfile />;
+                    default:
+                        return (
+                            <div class="animate-fade-in">
+                                <h2 class="text-3xl font-bold text-white tracking-tight mb-6">{activePage}</h2>
+                                <div class="glass-card p-8 rounded-2xl flex flex-col items-center justify-center min-h-[400px] text-gray-400">
+                                    <div class="opacity-50 mb-4 scale-150">
+                                        {navItems.find(i => i.name === activePage)?.icon()}
+                                    </div>
+                                    <p class="text-lg">This module is under development.</p>
+                                </div>
+                            </div>
+                        );
+                }
+            };
+
+            return (
+                <div class="flex h-screen overflow-hidden bg-[#110e1b]">
+                    {/* Mobile Header Top Bar */}
+                    <div class="md:hidden flex items-center justify-between px-6 py-4 bg-[#1a102b]/95 backdrop-blur-md border-b border-brand-800/50 absolute top-0 left-0 right-0 z-[60] shadow-xl">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-1 rounded-lg bg-brand-900/40 border border-brand-500/30">
+                                <img src="./logo.jpg" alt="SkillSync.AI Logo" class="w-8 h-8 object-contain rounded" />
+                            </div>
+                            <span class="text-lg font-bold tracking-wider text-white">SkillSync.AI</span>
+                        </div>
+                        <button 
+                            class="p-2 bg-brand-800/60 hover:bg-brand-700 border border-brand-500/30 rounded-lg text-white transition-colors"
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                        >
+                            <Icons.Menu />
+                        </button>
+                    </div>
+
+                    {/* Backdrop for mobile */}
+                    {sidebarOpen && (
+                        <div 
+                            class="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+                            onClick={() => setSidebarOpen(false)}
+                        ></div>
+                    )}
+
+                    {/* Sidebar */}
+                    <aside class={`mobile-sidebar md:translate-x-0 fixed md:static inset-y-0 left-0 w-64 bg-brand-sidebar border-r border-brand-800 z-40 flex flex-col transition-transform duration-300`}>
+                        <div class="p-6 flex flex-col items-center justify-center border-b border-white/5 space-y-3">
+                            <div class="p-2 rounded-xl bg-brand-900 bg-opacity-40 border border-brand-500/30 flex items-center justify-center w-full max-w-[140px]">
+                                <img src="./logo.jpg" alt="SkillSync.AI Logo" class="w-full h-auto object-contain rounded-lg shadow-[0_0_15px_rgba(139,92,246,0.3)]" />
+                            </div>
+                            <div class="text-center">
+                                <h1 class="text-lg font-bold tracking-wider text-white">SkillSync.AI</h1>
+                                <p class="text-xs font-medium text-brand-400 uppercase tracking-widest mt-1">Future starts here.</p>
+                            </div>
+                        </div>
+                        
+                        <nav class="flex-1 py-6 flex flex-col gap-2 px-3 overflow-y-auto">
+                            {navItems.map((item) => (
+                                <button
+                                    key={item.name}
+                                    onClick={() => navigate(item.name)}
+                                    class={`nav-item flex items-center w-full px-4 py-3 rounded-lg text-sm font-medium ${
+                                        activePage === item.name 
+                                            ? 'active font-semibold' 
+                                            : 'text-brand-300'
+                                    }`}
+                                >
+                                    <span class={`mr-3 ${activePage === item.name ? 'text-brand-400' : ''}`}>
+                                        {item.icon()}
+                                    </span>
+                                    {item.name}
+                                </button>
+                            ))}
+                        </nav>
+                        
+                        <div class="p-4 border-t border-white/5">
+                            <button 
+                                onClick={onLogout}
+                                class="w-full flex items-center px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                            >
+                                <span class="mr-3"><Icons.Logout /></span>
+                                Sign Out
+                            </button>
+                        </div>
+                    </aside>
+
+                    {/* Main Content */}
+                    <main class="flex-1 overflow-y-auto w-full relative z-0">
+                        {/* Background subtle elements isolated safely inside main container */}
+                        <div class="absolute inset-0 z-[-1] overflow-hidden pointer-events-none">
+                            <div class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-brand-600 rounded-full mix-blend-screen filter blur-[150px] opacity-[0.15]"></div>
+                        </div>
+                        
+                        <div class="p-6 md:p-10 lg:p-12 h-full max-w-6xl mx-auto pt-20 md:pt-12">
+                            {renderContent()}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+
+        // --- AUTH COMPONENT (Simplified) ---
+        const AuthApp = ({ onLogin }) => {
+            const [mode, setMode] = useState('login');
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [name, setName] = useState('');
+            
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const [success, setSuccess] = useState(null);
+
+            const toggleMode = (newMode) => {
+                setMode(newMode);
+                setError(null);
+                setSuccess(null);
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError(null);
+                setSuccess(null);
+
+                let endpoint = '';
+                let payload = {};
+
+                if (mode === 'login') {
+                    endpoint = '/api/auth/login';
+                    payload = { email, password };
+                } else if (mode === 'signup') {
+                    endpoint = '/api/auth/register';
+                    payload = { name, email, password };
+                }
+
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Something went wrong');
+                    }
+
+                    setSuccess(data.message);
+                    
+                    // Directly log the user in if a token is returned
+                    localStorage.setItem('career_ai_email', email);
+                    if(data.token) localStorage.setItem('career_ai_token', data.token);
+                    if(data.name || name) localStorage.setItem('career_ai_name', data.name || name);
+                    
+                    setSuccess("Authentication complete! Redirecting...");
+                    setTimeout(() => {
+                        onLogin();
+                    }, 1000);
+                    
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            
+            return (
+                <div class="flex items-center justify-center min-h-screen">
+                    <div class="glass-card rounded-2xl p-8 w-full max-w-md mx-6 backdrop-blur-xl relative z-20">
+                        <div class="text-center mb-8">
+                            <div class="flex justify-center mb-4">
+                                <div class="p-2 w-32 rounded-xl bg-brand-900 bg-opacity-40 border border-brand-500/40 shadow-[0_0_25px_rgba(139,92,246,0.25)]">
+                                    <img src="./logo.jpg" alt="SkillSync.AI Logo" class="w-full h-auto object-contain rounded-lg" />
+                                </div>
+                            </div>
+                            <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400 mt-4 drop-shadow-md pb-1">
+                                SkillSync.AI
+                            </h1>
+                            <p class="text-[10px] font-bold text-brand-400 uppercase tracking-[0.25em] mt-1.5 mb-4">
+                                Future starts here.
+                            </p>
+                            <p class="text-sm text-brand-300 mt-2 border-t border-brand-800/50 pt-4">
+                                {mode === 'login' && 'Welcome back! Unlock your career potential.'}
+                                {mode === 'signup' && 'Start your journey to success today.'}
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} class="space-y-4">
+                            {mode === 'signup' && (
+                                <div>
+                                    <label class="block text-sm font-medium text-brand-300 mb-1">Full Name</label>
+                                    <input 
+                                        type="text" 
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        placeholder="John Doe"
+                                        class="input-field w-full px-4 py-2.5 rounded-lg text-sm"
+                                        required
+                                    />
+                                </div>
+                            )}
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-brand-300 mb-1">Email Address</label>
+                                <input 
+                                    type="email" 
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="you@example.com"
+                                    class="input-field w-full px-4 py-2.5 rounded-lg text-sm"
+                                    required
+                                />
+                            </div>
+                            
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="block text-sm font-medium text-brand-300">Password</label>
+                                    {mode === 'login' && (
+                                        <a href="#" class="text-xs text-brand-400 hover:text-brand-300 hover:underline">Forgot password?</a>
+                                    )}
+                                </div>
+                                <input 
+                                    type="password" 
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                    class="input-field w-full px-4 py-2.5 rounded-lg text-sm"
+                                    required
+                                />
+                            </div>
+
+                            {error && (
+                                <div class="p-3 bg-red-900 bg-opacity-30 border border-red-500 rounded-lg text-red-200 text-sm">
+                                    {error}
+                                </div>
+                            )}
+                            {success && (
+                                <div class="p-3 bg-green-900 bg-opacity-30 border border-green-500 rounded-lg text-green-200 text-sm">
+                                    {success}
+                                </div>
+                            )}
+
+                            <button 
+                                type="submit" 
+                                disabled={loading}
+                                class="w-full bg-brand-600 hover:bg-brand-500 text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading && (
+                                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                )}
+                                {mode === 'login' && 'Sign In'}
+                                {mode === 'signup' && 'Create Account'}
+                            </button>
+                        </form>
+
+                        <p class="mt-8 text-center text-sm text-brand-300">
+                            {mode === 'login' ? "Don't have an account?" : "Already have an account?"}
+                            <button 
+                                type="button" 
+                                onClick={() => toggleMode(mode === 'login' ? 'signup' : 'login')}
+                                class="ml-1 text-brand-400 font-semibold hover:text-brand-300 hover:underline focus:outline-none"
+                            >
+                                {mode === 'login' ? 'Sign up' : 'Log in'}
+                            </button>
+                        </p>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ENTRY ---
+        const App = () => {
+            const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('career_ai_email'));
+
+            if (isAuthenticated) {
+                return <DashboardApp onLogout={() => {
+                    localStorage.removeItem('career_ai_token');
+                    localStorage.removeItem('career_ai_email');
+                    setIsAuthenticated(false);
+                }} />;
+            }
+            return <AuthApp onLogin={() => setIsAuthenticated(true)} />
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
