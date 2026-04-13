@@ -42,6 +42,14 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Supabase Core -->
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+        const supabaseUrl = 'https://apamjdoznenyojkfwlmw.supabase.co';
+        const supabaseKey = 'sb_publishable_KocO6qYZH4wHrBlilk2zIg_x0XkquqK';
+        window.supabase = createClient(supabaseUrl, supabaseKey);
+    </script>
+
     <!-- Firebase Core -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
@@ -1417,30 +1425,38 @@
                 }
             };
 
-            const parseResume = async () => {
-                if (!file) return;
+            const uploadResume = async () => {
+                if (!file) {
+                    alert("Please select a file to upload.");
+                    return;
+                }
+                if (file.type !== 'application/pdf') {
+                    alert("Only PDF files are allowed.");
+                    return;
+                }
+                
                 setParsing(true);
                 setUploadError(null);
                 
-                const formData = new FormData();
-                formData.append('resume', file);
+                const fileName = `${Date.now()}_${file.name}`;
+                console.log("Starting upload for file:", fileName);
                 
                 try {
-                    const token = localStorage.getItem('career_ai_token');
-                    const response = await fetch('/api/auth/upload-resume', {
-                        method: 'POST',
-                        // Don't set Content-Type header, let browser set it with boundary for FormData
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: formData
-                    });
+                    const { data, error } = await window.supabase
+                        .storage
+                        .from('resumes')
+                        .upload(fileName, file);
+
+                    if (error) {
+                        console.error("Upload error response:", error);
+                        throw error;
+                    }
                     
-                    const data = await response.json();
-                    if (!response.ok) throw new Error(data.error || 'Parsing failed');
-                    
-                    setParsedData(data.data);
+                    console.log("Upload success response:", data);
+                    alert("Upload successful ✅");
                 } catch(err) {
+                    console.error("Full upload error:", err);
+                    alert("Upload failed: " + err.message);
                     setUploadError(err.message);
                 } finally {
                     setParsing(false);
@@ -1729,7 +1745,7 @@
                                         {file && !uploadError && (
                                             <div class="mt-6 flex justify-end">
                                                 <button 
-                                                    onClick={parseResume}
+                                                    onClick={uploadResume}
                                                     disabled={parsing}
                                                     class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-brand-500 hover:bg-brand-400 shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all disabled:opacity-50"
                                                 >
