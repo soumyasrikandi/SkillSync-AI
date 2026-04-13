@@ -42,6 +42,28 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Firebase Core -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDEqZYnB0jAYSdschGdeSixv2LEj0KNJPg",
+            authDomain: "skillsyncai-3bbcc.firebaseapp.com",
+            projectId: "skillsyncai-3bbcc",
+            storageBucket: "skillsyncai-3bbcc.firebasestorage.app",
+            messagingSenderId: "513552899447",
+            appId: "1:513552899447:web:33f7e5ec6f9fe2c31ad572"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        window.firebaseAuth = auth;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+    </script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -1905,44 +1927,28 @@
                 setError(null);
                 setSuccess(null);
 
-                let endpoint = '';
-                let payload = {};
-
-                if (mode === 'login') {
-                    endpoint = '/api/auth/login';
-                    payload = { email, password };
-                } else if (mode === 'signup') {
-                    endpoint = '/api/auth/register';
-                    payload = { name, email, password };
-                }
-
                 try {
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(data.error || 'Something went wrong');
+                    if (mode === 'login') {
+                        await window.signInWithEmailAndPassword(window.firebaseAuth, email, password);
+                        setSuccess("Login successful! Redirecting...");
+                    } else if (mode === 'signup') {
+                        await window.createUserWithEmailAndPassword(window.firebaseAuth, email, password);
+                        setSuccess("Account created successfully! Redirecting...");
                     }
 
-                    setSuccess(data.message);
-                    
-                    // Directly log the user in if a token is returned
                     localStorage.setItem('career_ai_email', email);
-                    if(data.token) localStorage.setItem('career_ai_token', data.token);
-                    if(data.name || name) localStorage.setItem('career_ai_name', data.name || name);
+                    localStorage.setItem('career_ai_name', name || email.split('@')[0]);
                     
-                    setSuccess("Authentication complete! Redirecting...");
                     setTimeout(() => {
                         onLogin();
                     }, 1000);
                     
                 } catch (err) {
-                    setError(err.message);
+                    let errMsg = err.message;
+                    if (err.code === 'auth/invalid-credential') errMsg = 'Invalid email or password.';
+                    if (err.code === 'auth/email-already-in-use') errMsg = 'Email is already in use.';
+                    if (err.code === 'auth/weak-password') errMsg = 'Password should be at least 6 characters.';
+                    setError(errMsg || 'Authentication failed');
                 } finally {
                     setLoading(false);
                 }
