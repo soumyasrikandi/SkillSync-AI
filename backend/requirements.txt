@@ -4,3 +4,4 @@ gunicorn
 python-dotenv
 pypdf
 PyJWT
+bcrypt
