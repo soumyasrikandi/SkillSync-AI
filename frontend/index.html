@@ -186,7 +186,7 @@
                 setLoading(true);
                 setError(null);
                 try {
-                    const res = await fetch('/api/auth/analyze-skills', {
+                    const res = await fetch('https://skill-sync-backend-36fqhho1j-soumyasrikandis-projects.vercel.app/api/auth/analyze-skills', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -495,7 +495,7 @@
                 setLoading(true);
                 setError(null);
                 try {
-                    const res = await fetch('/api/auth/predict-interview', {
+                    const res = await fetch('https://skill-sync-backend-36fqhho1j-soumyasrikandis-projects.vercel.app/api/auth/predict-interview', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -659,7 +659,7 @@
                 setLoading(true);
                 setError(null);
                 try {
-                    const res = await fetch('/api/auth/recommendations', {
+                    const res = await fetch('https://skill-sync-backend-36fqhho1j-soumyasrikandis-projects.vercel.app/api/auth/recommendations', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -820,7 +820,7 @@
 
             const fetchProfile = async () => {
                 try {
-                    const res = await fetch('/api/auth/get-profile', {
+                    const res = await fetch('https://skill-sync-backend-36fqhho1j-soumyasrikandis-projects.vercel.app/api/auth/get-profile', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email })
@@ -842,7 +842,7 @@
                 setSaving(true);
                 setMessage({ type: '', text: '' });
                 try {
-                    const res = await fetch('/api/auth/update-profile', {
+                    const res = await fetch('https://skill-sync-backend-36fqhho1j-soumyasrikandis-projects.vercel.app/api/auth/update-profile', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(profile)
@@ -1064,7 +1064,7 @@
                 
                 try {
                     const skills = parsedData?.skills || [];
-                    const res = await fetch('/api/auth/generate-assessment', {
+                    const res = await fetch('https://skill-sync-backend-36fqhho1j-soumyasrikandis-projects.vercel.app/api/auth/generate-assessment', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ skills })
@@ -1124,7 +1124,7 @@
                 });
 
                 try {
-                    const res = await fetch('/api/auth/score-assessment', {
+                    const res = await fetch('https://skill-sync-backend-36fqhho1j-soumyasrikandis-projects.vercel.app/api/auth/score-assessment', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
