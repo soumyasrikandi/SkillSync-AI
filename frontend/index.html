@@ -1438,25 +1438,28 @@
                 setParsing(true);
                 setUploadError(null);
                 
-                const fileName = `${Date.now()}_${file.name}`;
-                console.log("Starting upload for file:", fileName);
+                console.log("Starting upload to backend for file:", file.name);
                 
                 try {
-                    const { data, error } = await window.supabase
-                        .storage
-                        .from('resumes')
-                        .upload(fileName, file);
+                    const formData = new FormData();
+                    formData.append('resume', file);
 
-                    if (error) {
-                        console.error("Upload error response:", error);
-                        throw error;
+                    const response = await fetch('/api/auth/upload-resume', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Failed to upload and parse resume');
                     }
                     
                     console.log("Upload success response:", data);
-                    alert("Upload successful ✅");
+                    setParsedData(data.data);
+                    alert("Upload and parsing successful ✅");
                 } catch(err) {
                     console.error("Full upload error:", err);
-                    alert("Upload failed: " + err.message);
                     setUploadError(err.message);
                 } finally {
                     setParsing(false);
